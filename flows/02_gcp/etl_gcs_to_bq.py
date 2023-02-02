@@ -1,58 +1,64 @@
-from pathlib import Path
+from pathlib import Path  # py-standard lib usefull for dealing with file paths
 import pandas as pd
 from prefect import flow, task
-from prefect_gcp.cloud_storage import GcsBucket
-from prefect_gcp import GcpCredentials
+from prefect_gcp.cloud_storage import GcsBucket  # to push data to GCS bucket
+from random import randint
 
 
 @task(retries=3)
-def extract_from_gcs(color: str, year: int, month: int) -> Path:
-    """Download trip data from GCS"""
-    gcs_path = (
-        f"{color}_taxi_data_web_download/{color}_tripdata_{year}-{month:02}.parquet"
-    )
-    gcs_block = GcsBucket.load("dtc-gcs-bucket")
-    gcs_block.get_directory(from_path=gcs_path, local_path=f"./bq_data")
-    return Path(f"./{gcs_path}")
+def fetch(dataset_url: str) -> pd.DataFrame:
+    """Read taxi data from web into pandas DataFrame"""
+    # if randint(0, 1) > 0:
+    #     raise Exception
+
+    df = pd.read_csv(dataset_url)  # transforms csv to panda dataframe
+    return df
 
 
-@task()
-def transform(path: Path) -> pd.DataFrame:
-    """Data cleaning example"""
-    df = pd.read_parquet(path)
-    print(f"pre: missing passenger count: {df['passenger_count'].isna().sum()}")
-    df["passenger_count"].fillna(0, inplace=True)
-    print(f"post: missing passenger count: {df['passenger_count'].isna().sum()}")
+@task(log_prints=True)
+def clean(df: pd.DataFrame) -> pd.DataFrame:
+    """Fix dtype issues"""
+
+    # transforms string column to a datetime column
+    df["lpep_pickup_datetime"] = pd.to_datetime(df["lpep_pickup_datetime"])
+    df["lpep_dropoff_datetime"] = pd.to_datetime(df["lpep_dropoff_datetime"])
+
+    print(df.head(2))
+    print(f"columns: {df.dtypes}")  # print column types
+    print(f"rows: {len(df)}")  # df = complete grid, hence len(df) = # rows
     return df
 
 
 @task()
-def write_bq(df: pd.DataFrame) -> None:
-    """Write DataFrame to BiqQuery"""
+def write_local(df: pd.DataFrame, color: str, dataset_file: str) -> Path:
+    """Write DataFrame out locally as parquet file"""
+    path = Path(f"./{color}_taxi_data_web_download/{dataset_file}.parquet")
+    df.to_parquet(path, compression="gzip")
+    return path
 
-    gcp_credentials_block = GcpCredentials.load("dtc-gcp-credentials")
 
-    df.to_gbq(
-        destination_table="trips_data_all.rides",
-        project_id="dtc-data-engineering-375007",
-        credentials=gcp_credentials_block.get_credentials_from_service_account(),
-        chunksize=500_000,
-        if_exists="append",
-    )
+@task()
+def write_gcs(path: Path) -> None:
+    """Upload local parquet file to GCS"""
+    gcs_block = GcsBucket.load("dtc-gcs-bucket")
+    gcs_block.upload_from_path(from_path=path, to_path=path)
+    return
 
 
 @flow()
-def etl_gcs_to_bq(color: str, year: int, months: list):
-    """Main ETL flow to load data into Big Query"""
+def etl_web_to_gcs() -> None:
+    """The main ETL function"""
+    color = "green"
+    year = 2020
+    month = 11
+    dataset_file = f"{color}_tripdata_{year}-{month:02}"
+    dataset_url = f"https://github.com/DataTalksClub/nyc-tlc-data/releases/download/{color}/{dataset_file}.csv.gz"
 
-    for month in months:
-        path = extract_from_gcs(color, year, month)
-        df = transform(path)
-        write_bq(df)
+    df = fetch(dataset_url)  # put taxi data into a pandas data frame
+    df_clean = clean(df)  # transform data, clean it
+    path = write_local(df_clean, color, dataset_file)
+    write_gcs(path)
 
 
 if __name__ == "__main__":
-    color = "yellow"
-    year = 2019
-    months = [2, 3]
-    etl_gcs_to_bq()
+    etl_web_to_gcs()

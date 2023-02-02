@@ -5,4 +5,4 @@ COPY docker-requirements.txt .
 RUN pip install -r docker-requirements.txt --trusted-host pypi.python.org --no-cache-dir
 
 COPY flows /opt/prefect/flows
-RUN mkdir /opt/prefect/data/yellow
+COPY flows/taxi_data_web_download /opt/prefect/data/yellow
