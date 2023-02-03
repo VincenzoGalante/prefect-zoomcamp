@@ -51,7 +51,7 @@ def write_gcs(path: Path) -> None:
 
 @flow()
 def etl_web_to_gcs(color: str, year: int, months: list) -> None:
-    """The main ETL function"""
+    """The main ETL function for web to bucket"""
 
     counter = 0
 
