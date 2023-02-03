@@ -139,4 +139,3 @@ dmypy.json
 
 # user exclusions
 /home/vincenzo/prefect-zoomcamp/blocks/make_gcp_blocks.py
-./flows/02_gcp/yellow_taxi_data

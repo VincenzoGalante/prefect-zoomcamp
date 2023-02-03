@@ -33,19 +33,22 @@ def clean(df: pd.DataFrame, color: str) -> pd.DataFrame:
     return df
 
 
-@task()
+@task(log_prints=True)
 def write_local(df: pd.DataFrame, color: str, dataset_file: str) -> Path:
     """Write DataFrame out locally as parquet file"""
-    path = Path(f"./{color}_taxi_data/{dataset_file}.parquet")
-    df.to_parquet(path, compression="gzip")
-    return path
+
+    path = Path(__file__).parent  # /home/vincenzo/prefect-zoomcamp/flows/02_gcp
+    local_path = Path(f"{path}/{color}_taxi_data/{dataset_file}.parquet")
+
+    df.to_parquet(local_path, compression="gzip")
+    return local_path
 
 
 @task()
-def write_gcs(path: Path) -> None:
+def write_gcs(local_path: Path, gc_path: Path) -> None:
     """Upload local parquet file to GCS"""
     gcs_block = GcsBucket.load("dtc-gcs-bucket")
-    gcs_block.upload_from_path(from_path=path, to_path=path)
+    gcs_block.upload_from_path(from_path=local_path, to_path=gc_path)
     return
 
 
@@ -58,7 +61,7 @@ def etl_web_to_gcs(color: str, year: int, months: list) -> None:
     for month in months:
         dataset_file = f"{color}_tripdata_{year}-{month:02}"
         dataset_url = f"https://github.com/DataTalksClub/nyc-tlc-data/releases/download/{color}/{dataset_file}.csv.gz"
-
+        
         df = fetch(dataset_url)  # put taxi data into a pandas data frame
         df_clean = clean(df, color)  # transform data
         counter = +len(df)
