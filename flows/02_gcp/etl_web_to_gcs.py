@@ -61,18 +61,18 @@ def etl_web_to_gcs(color: str, year: int, months: list) -> None:
     for month in months:
         dataset_file = f"{color}_tripdata_{year}-{month:02}"
         dataset_url = f"https://github.com/DataTalksClub/nyc-tlc-data/releases/download/{color}/{dataset_file}.csv.gz"
+        
         df = fetch(dataset_url)  # put taxi data into a pandas data frame
         df_clean = clean(df, color)  # transform data
-        local_path = write_local(df_clean, color, dataset_file)
-        gc_path = Path(f"{color}_taxi_data/{dataset_file}.parquet")
-        write_gcs(local_path, gc_path)
-        counter += len(df)
+        counter = +len(df)
+        path = write_local(df_clean, color, dataset_file)
+        write_gcs(path)
 
-    print(f"Totally processed {counter} rows")
+    print(f"Total processed rows: {counter}")
 
 
 if __name__ == "__main__":
-    color = "yellow"
+    color = "green"
     year = 2019
     months = [2, 3]
     etl_web_to_gcs(color, year, months)
