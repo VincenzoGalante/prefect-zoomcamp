@@ -16,12 +16,16 @@ def fetch(dataset_url: str) -> pd.DataFrame:
 
 
 @task(log_prints=True)
-def clean(df: pd.DataFrame) -> pd.DataFrame:
+def clean(df: pd.DataFrame, color: str) -> pd.DataFrame:
     """Fix dtype issues"""
 
     # transforms string column to a datetime column
-    df["tpep_pickup_datetime"] = pd.to_datetime(df["tpep_pickup_datetime"])
-    df["tpep_dropoff_datetime"] = pd.to_datetime(df["tpep_dropoff_datetime"])
+    if color == "yellow":
+        df["tpep_pickup_datetime"] = pd.to_datetime(df["tpep_pickup_datetime"])
+        df["tpep_dropoff_datetime"] = pd.to_datetime(df["tpep_dropoff_datetime"])
+    else:
+        df["lpep_pickup_datetime"] = pd.to_datetime(df["lpep_pickup_datetime"])
+        df["lpep_dropoff_datetime"] = pd.to_datetime(df["lpep_dropoff_datetime"])
 
     print(df.head(2))
     print(f"columns: {df.dtypes}")  # print column types
@@ -46,19 +50,26 @@ def write_gcs(path: Path) -> None:
 
 
 @flow()
-def etl_web_to_gcs() -> None:
+def etl_web_to_gcs(color: str, year: int, months: list) -> None:
     """The main ETL function"""
-    color = "yellow"
-    year = 2021
-    month = 1
-    dataset_file = f"{color}_tripdata_{year}-{month:02}"
-    dataset_url = f"https://github.com/DataTalksClub/nyc-tlc-data/releases/download/{color}/{dataset_file}.csv.gz"
 
-    df = fetch(dataset_url)  # put taxi data into a pandas data frame
-    df_clean = clean(df)  # transform data
-    path = write_local(df_clean, color, dataset_file)
-    write_gcs(path)
+    counter = 0
+
+    for month in months:
+        dataset_file = f"{color}_tripdata_{year}-{month:02}"
+        dataset_url = f"https://github.com/DataTalksClub/nyc-tlc-data/releases/download/{color}/{dataset_file}.csv.gz"
+
+        df = fetch(dataset_url)  # put taxi data into a pandas data frame
+        df_clean = clean(df, color)  # transform data
+        counter = +len(df)
+        path = write_local(df_clean, color, dataset_file)
+        write_gcs(path)
+
+    print(f"Total processed rows: {counter}")
 
 
 if __name__ == "__main__":
-    etl_web_to_gcs()
+    color = "green"
+    year = 2019
+    months = [2, 3]
+    etl_web_to_gcs(color, year, months)
