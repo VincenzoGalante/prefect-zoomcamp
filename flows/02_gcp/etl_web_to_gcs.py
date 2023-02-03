@@ -70,6 +70,6 @@ def etl_web_to_gcs(color: str, year: int, months: list) -> None:
 
 if __name__ == "__main__":
     color = "green"
-    year = 2019
-    months = [2, 3]
+    year = 2020
+    months = [11]
     etl_web_to_gcs(color, year, months)
