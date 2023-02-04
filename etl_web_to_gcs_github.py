@@ -38,7 +38,7 @@ def write_local(df: pd.DataFrame, color: str, dataset_file: str) -> Path:
     """Write DataFrame out locally as parquet file"""
 
     # path = Path(__file__).parent  # /home/vincenzo/prefect-zoomcamp/flows/02_gcp
-    local_path = Path(f"/flows/02_gcp/{color}_taxi_data/{dataset_file}.parquet")
+    local_path = Path(f"./flows/02_gcp/{color}_taxi_data/{dataset_file}.parquet")
     gc_path = Path(f"./{color}_taxi_data/{dataset_file}.parquet")
 
     df.to_parquet(local_path, compression="gzip")
