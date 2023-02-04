@@ -8,7 +8,7 @@ github_deployment = Deployment.build_from_flow(
     flow=data_to_bucket,
     name="web-to-gc-bucket-gh",
     storage=github_block,
-    parameters={"color": "green", "year": 2020, "months": [11]},
+    parameters={"color": "green", "year": 2020, "month": 11},
 )
 
 github_deployment.apply()

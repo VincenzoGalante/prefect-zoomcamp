@@ -18,8 +18,6 @@ def df_to_parquet(raw: bytes) -> pd.DataFrame:
     df.to_parquet(buffer, engine="auto", compression="snappy")
 
     print(f"amount of rows : {len(df)}")
-
-    buffer.seek(0)
     return buffer
 
 
