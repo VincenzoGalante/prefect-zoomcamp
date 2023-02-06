@@ -17,13 +17,13 @@ def df_to_parquet(raw: bytes) -> pd.DataFrame:
     buffer = BytesIO()
     df.to_parquet(buffer, engine="auto", compression="snappy")
     print(f"amount of rows : {len(df)}")
-    buffer.seek(0)
     return buffer
 
 
 @task(log_prints=True, name="TO BUCKET")
 def upload_to_bucket(encoded: bytes, storage_url: str) -> None:
     gcs_block = GcsBucket.load("dtc-gcs-bucket")
+    encoded.seek(0)
     gcs_block.upload_from_file_object(encoded, storage_url)
 
 
@@ -39,11 +39,9 @@ def data_to_bucket(color: str, year: int, month: int) -> None:
 
 if __name__ == "__main__":
     color = "green"
-    year = 2020
-    month = 11
+    year = 2019
+    month = 4
     dataset_url = f"https://github.com/DataTalksClub/nyc-tlc-data/releases/download/{color}/{color}_tripdata_{year}-{month:02}.csv.gz"
     storage_url = f"{color}_taxi_data/{color}_tripdata_{year}-{month:02}.parquet"
 
-    raw = get_from_web(dataset_url)
-    parquet = df_to_parquet(raw)
-    upload_to_bucket(parquet, storage_url)
+    data_to_bucket(color, year, month)
