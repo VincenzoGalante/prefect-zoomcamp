@@ -8,14 +8,14 @@ from prefect_gcp.cloud_storage import GcsBucket
 @task(log_prints=True, name="GET FROM WEB")
 def get_from_web(dataset_url: str) -> bytes:
     raw = requests.get(dataset_url)
-    return raw.content
+    return raw.content  # returning bytes object
 
 
 @task(log_prints=True, name="TO PARQUET")
 def df_to_parquet(raw: bytes) -> pd.DataFrame:
-    df = pd.read_csv(BytesIO(raw), compression="gzip")
-    buffer = BytesIO()
-    df.to_parquet(buffer, engine="auto", compression="snappy")
+    df = pd.read_csv(BytesIO(raw), compression="gzip")  # reading in bytes object
+    buffer = BytesIO()  # creating in-memory object
+    df.to_parquet(buffer, engine="auto", compression="snappy")  # fill the object
     print(f"amount of rows : {len(df)}")
     return buffer
 
@@ -23,7 +23,7 @@ def df_to_parquet(raw: bytes) -> pd.DataFrame:
 @task(log_prints=True, name="TO BUCKET")
 def upload_to_bucket(encoded: bytes, storage_url: str) -> None:
     gcs_block = GcsBucket.load("dtc-gcs-bucket")
-    encoded.seek(0)
+    encoded.seek(0)  # reset the object to read from top
     gcs_block.upload_from_file_object(encoded, storage_url)
 
 
